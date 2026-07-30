@@ -109,3 +109,78 @@ dbSave $cv
 #############################################
 
 ExportGDS merged.gds $TOP_CELL
+
+
+
+###################################################
+# Import APR GDS
+###################################################
+
+set aprLib "APR_LIB"
+
+lakerImportStream \
+    -file $APR_GDS \
+    -lib  $aprLib \
+    -tech $TECH \
+    -refLib $REF_LIB \
+    -IoLayerMapMode true \
+    -case Preserve \
+    -label Preserve \
+    -maxVerti 1024 \
+    -layerMap $LAYER_MAP
+
+
+###################################################
+# Import Macro GDS
+###################################################
+
+foreach gds $MACRO_GDS_LIST {
+
+    # Generate unique library name
+    set macroLib [file rootname [file tail $gds]]
+
+    puts "Import macro $gds -> $macroLib"
+
+    lakerImportStream \
+        -file $gds \
+        -lib  $macroLib \
+        -tech $TECH \
+        -IoLayerMapMode true \
+        -case Preserve \
+        -label Preserve \
+        -maxVerti 1024 \
+        -logicProp \
+        -mcellProp \
+        -keepPCell \
+        -layerMap $LAYER_MAP
+}
+
+
+###################################################
+# Open APR top
+###################################################
+
+set cv [lakerOpenDesign \
+        -lib $aprLib \
+        -cell $TOP_CELL \
+        -view layout \
+        -mode edit]
+
+
+###################################################
+# Export merged GDS
+###################################################
+
+lakerExportStream \
+    -file merged.gds \
+    -lib $aprLib \
+    -topCell $TOP_CELL \
+    -case Preserve \
+    -label Preserve \
+    -maxVerti 1024 \
+    -logicProp \
+    -mcellProp \
+    -mergeRefLib \
+    -OutAbsCell \
+    -SmashMCell false \
+    -IoLayerMapMode true
