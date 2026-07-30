@@ -1,0 +1,111 @@
+#=========================================================
+# Common variables
+#=========================================================
+
+set WORK_LIB     "MERGE_LIB"
+set WORK_PATH    "./work"
+
+set TECH_FILE    "/proj/tech/tech.tf"
+set LAYER_MAP    "/proj/tech/layer.map"
+
+set REF_LIBS { \
+    REF_LIB1 \
+    REF_LIB2 \
+}
+
+set MAX_VERTI 1024
+
+proc ImportGDS {gdsFile} {
+
+    global TECH_FILE
+    global WORK_PATH
+    global WORK_LIB
+    global REF_LIBS
+    global LAYER_MAP
+    global MAX_VERTI
+
+    puts "Import : $gdsFile"
+
+    lakerImportStream \
+        -file               $gdsFile \
+        -tech               $TECH_FILE \
+        -path               $WORK_PATH \
+        -lib                $WORK_LIB \
+        -refLib             $REF_LIBS \
+        -CorrectNon90Inst   true \
+        -IoLayerMapMode     true \
+        -sumExtractLayer    true \
+        -case               Preserve \
+        -label              Preserve \
+        -maxVerti           $MAX_VERTI \
+        -instProp           true \
+        -netProp            true \
+        -logicProp          true \
+        -mcellProp          true \
+        -keepPCell          true \
+        -layerMap           $LAYER_MAP
+}
+
+proc ExportGDS {outfile topcell} {
+
+    global WORK_LIB
+    global MAX_VERTI
+
+    puts "Export : $outfile"
+
+    lakerExportStream \
+        -file           $outfile \
+        -lib            $WORK_LIB \
+        -topCell        $topcell \
+        -case           Preserve \
+        -label          Preserve \
+        -maxVerti       $MAX_VERTI \
+        -logicProp      true \
+        -mcellProp      true \
+        -mergeRefLib    true \
+        -OutAbsCell     true \
+        -SmashMCell     false \
+        -IoLayerMapMode true
+}
+
+#############################################
+# Import APR
+#############################################
+
+ImportGDS $APR_GDS
+
+#############################################
+# Open Top
+#############################################
+
+set cv [lakerOpenDesign \
+            -lib $WORK_LIB \
+            -cell $TOP_CELL \
+            -view layout \
+            -mode edit]
+
+#############################################
+# Import IPs
+#############################################
+
+foreach gds $GDS_LIST {
+
+    ImportGDS $gds
+
+    set cell [file rootname [file tail $gds]]
+
+    lakerCreateInstance \
+        -cellView $cv \
+        -lib $WORK_LIB \
+        -cell $cell \
+        -view layout \
+        -point {0 0}
+}
+
+dbSave $cv
+
+#############################################
+# Export
+#############################################
+
+ExportGDS merged.gds $TOP_CELL
