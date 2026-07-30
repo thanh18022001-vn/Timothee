@@ -1,0 +1,285 @@
+############################################################
+# Laker APR GDS + Macro GDS Merge Script
+#
+# Usage:
+#   tclsh merge_gds.tcl <design.cfg>
+#
+############################################################
+
+
+############################################################
+# Check input configuration
+############################################################
+
+if {$argc != 1} {
+
+    puts "Usage:"
+    puts "  tclsh merge_gds.tcl <design.cfg>"
+    exit 1
+}
+
+
+set CFG_FILE [lindex $argv 0]
+
+
+if {![file exists $CFG_FILE]} {
+
+    puts "ERROR: Config file not found:"
+    puts $CFG_FILE
+    exit 1
+}
+
+
+############################################################
+# Load design configuration
+############################################################
+
+puts "Load configuration:"
+puts $CFG_FILE
+
+source $CFG_FILE
+
+
+
+############################################################
+# Get library name from GDS/OAS filename
+#
+# Example:
+#   timo_APR.gds.gz -> timo_APR
+#   PLL.gds         -> PLL
+#   SRAM1.oasis     -> SRAM1
+############################################################
+
+proc getLibName {filePath} {
+
+    set fileName [file tail $filePath]
+
+
+    # remove gzip suffix
+    regsub {\.gz$} $fileName "" fileName
+
+
+    # remove layout suffix
+    foreach ext {.gds .oas .oasis} {
+
+        if {[string match "*$ext" $fileName]} {
+
+            regsub "$ext$" $fileName "" fileName
+            break
+        }
+    }
+
+
+    return $fileName
+}
+
+
+
+############################################################
+# Collect macro layout files
+############################################################
+
+proc collectGDS {dir} {
+
+    set result {}
+
+
+    foreach file [glob -nocomplain -directory $dir *] {
+
+
+        if {![file isfile $file]} {
+            continue
+        }
+
+
+        set name [string tolower $file]
+
+
+        if {
+            [string match "*.gds"      $name] ||
+            [string match "*.gds.gz"   $name] ||
+            [string match "*.oas"      $name] ||
+            [string match "*.oas.gz"   $name] ||
+            [string match "*.oasis"    $name] ||
+            [string match "*.oasis.gz" $name]
+        } {
+
+            lappend result $file
+        }
+    }
+
+
+    return [lsort $result]
+}
+
+
+
+############################################################
+# Import stream function
+############################################################
+
+proc importStream {gdsFile libName} {
+
+    global TECH_FILE
+    global LAYER_MAP
+
+
+    puts "--------------------------------"
+    puts "Import File : $gdsFile"
+    puts "Library     : $libName"
+    puts "--------------------------------"
+
+
+    lakerImportStream \
+        -file $gdsFile \
+        -tech $TECH_FILE \
+        -lib $libName \
+        -IoLayerMapMode true \
+        -case Preserve \
+        -label Preserve \
+        -maxVerti 1024 \
+        -logicProp \
+        -mcellProp \
+        -layerMap $LAYER_MAP
+}
+
+
+
+############################################################
+# Step 1:
+# Import APR GDS
+############################################################
+
+set APR_LIB [getLibName $APR_GDS]
+
+
+puts "================================"
+puts "Import APR GDS"
+puts "File : $APR_GDS"
+puts "Lib  : $APR_LIB"
+puts "================================"
+
+
+importStream \
+    $APR_GDS \
+    $APR_LIB
+
+
+
+############################################################
+# Step 2:
+# Collect Macro GDS
+############################################################
+
+set MACRO_LIST [collectGDS $MACRO_GDS_PATH]
+
+
+puts "================================"
+puts "Macro GDS List"
+puts "================================"
+
+
+foreach macro $MACRO_LIST {
+
+    puts $macro
+}
+
+
+
+############################################################
+# Step 3:
+# Import Macro GDS
+############################################################
+
+foreach macro $MACRO_LIST {
+
+
+    set macroLib [getLibName $macro]
+
+
+    importStream \
+        $macro \
+        $macroLib
+}
+
+
+
+############################################################
+# Step 4:
+# Open APR Top Cell
+############################################################
+
+puts "================================"
+puts "Open APR Design"
+puts "Cell : $TOP_CELL"
+puts "================================"
+
+
+set TOP_CV [lakerOpenDesign \
+                -lib $APR_LIB \
+                -cell $TOP_CELL \
+                -view layout \
+                -mode edit]
+
+
+
+############################################################
+# Step 5:
+# Create APR Instance
+#
+# Only for APR top design.
+# Macro instances are NOT created here.
+############################################################
+
+puts "================================"
+puts "Create APR Instance"
+puts "================================"
+
+
+lakerCreateInstance \
+    -cellView $TOP_CV \
+    -lib $APR_LIB \
+    -cell $TOP_CELL \
+    -view layout \
+    -point {0 0}
+
+
+
+############################################################
+# Step 6:
+# Export merged GDS
+############################################################
+
+puts "================================"
+puts "Export Merge GDS"
+puts "Output : $OUTPUT_GDS"
+puts "================================"
+
+
+lakerExportStream \
+    -file $OUTPUT_GDS \
+    -lib $APR_LIB \
+    -topCell $TOP_CELL \
+    -case Preserve \
+    -label Preserve \
+    -maxVerti 1024 \
+    -logicProp \
+    -mcellProp \
+    -mergeRefLib \
+    -SmashMCell false \
+    -IoLayerMapMode true
+
+
+
+############################################################
+# Finish
+############################################################
+
+puts "================================"
+puts "GDS MERGE COMPLETE"
+puts "Output:"
+puts $OUTPUT_GDS
+puts "================================"
+
+
+exit
