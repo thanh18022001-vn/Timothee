@@ -1,42 +1,71 @@
-################################################
-# Design configuration
-################################################
+############################################################
 
-# APR GDS input
-set APR_GDS \
-    "/work/design/timo_APR.gds"
+# input.cfg
 
+############################################################
 
-# APR top cell name
-set TOP_CELL \
-    "TIMO_TOP"
+############################################################
 
+# Cover Cell
 
-# Directory contains macro GDS/OAS/OASIS files
-#
-# Example:
-#   PLL.gds
-#   IO.gds.gz
-#   SRAM1.oasis
-#   SRAM2.oas.gz
-#
-set MACRO_GDS_PATH \
-    "/work/design/macro_gds"
+############################################################
 
+set COVER_GDS 
+"/work/design/cover_cell_timo.gds"
 
-# Final merged GDS output
-set OUTPUT_GDS \
-    "/work/output/timo_MERGED.gds"
+set COVER_TOP_CELL 
+"COVER_CELL_TIMO"
 
+############################################################
 
+# APR
 
-################################################
-# Technology information
-################################################
+############################################################
 
-set TECH_FILE \
-    "/work/tech/tech.tf"
+set APR_GDS 
+"/work/design/timo_APR.gds"
 
+set APR_TOP_CELL 
+"TIMO_TOP"
 
-set LAYER_MAP \
-    "/work/tech/layer.map"
+############################################################
+
+# APR Fill
+
+############################################################
+
+set APR_FILL_GDS 
+"/work/design/timo_APR_FILL.gds"
+
+set APR_FILL_TOP_CELL 
+"TIMO_TOP_FILL"
+
+############################################################
+
+# Macro GDS Directory
+
+############################################################
+
+set MACRO_GDS_PATH 
+"/work/design/macro_gds"
+
+############################################################
+
+# Output
+
+############################################################
+
+set OUTPUT_GDS 
+"/work/output/timo_MERGED.gds"
+
+############################################################
+
+# Technology
+
+############################################################
+
+set TECH_FILE 
+"/work/tech/tech.tf"
+
+set LAYER_MAP 
+"/work/tech/layer.map"
