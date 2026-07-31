@@ -1,0 +1,102 @@
+############################################################
+
+# merge_utils.tcl
+
+############################################################
+
+proc getLibName {filePath} {
+
+```
+set fileName [file tail $filePath]
+
+regsub {\.gz$} $fileName "" fileName
+
+foreach ext {.gds .oas .oasis} {
+
+    if {[string match "*$ext" $fileName]} {
+
+        regsub "$ext$" $fileName "" fileName
+        break
+    }
+}
+
+return $fileName
+```
+
+}
+
+proc collectGDS {dir} {
+
+```
+set result {}
+
+foreach file [glob -nocomplain -directory $dir *] {
+
+    if {![file isfile $file]} {
+        continue
+    }
+
+    set name [string tolower $file]
+
+    if {
+        [string match "*.gds"      $name] ||
+        [string match "*.gds.gz"   $name] ||
+        [string match "*.oas"      $name] ||
+        [string match "*.oas.gz"   $name] ||
+        [string match "*.oasis"    $name] ||
+        [string match "*.oasis.gz" $name]
+    } {
+        lappend result $file
+    }
+}
+
+return [lsort $result]
+```
+
+}
+
+proc importStream {gdsFile libName {refLibList ""}} {
+
+```
+global TECH_FILE
+global LAYER_MAP
+
+puts ""
+puts "================================"
+puts "Import File : $gdsFile"
+puts "Library     : $libName"
+puts "RefLib      : $refLibList"
+puts "================================"
+
+if {$refLibList eq ""} {
+
+    lakerImportStream \
+        -file $gdsFile \
+        -tech $TECH_FILE \
+        -lib $libName \
+        -IoLayerMapMode true \
+        -case Preserve \
+        -label Preserve \
+        -maxVerti 1024 \
+        -logicProp \
+        -mcellProp \
+        -layerMap $LAYER_MAP
+
+} else {
+
+    lakerImportStream \
+        -file $gdsFile \
+        -tech $TECH_FILE \
+        -lib $libName \
+        -reflib $refLibList \
+        -IoLayerMapMode true \
+        -case Preserve \
+        -label Preserve \
+        -maxVerti 1024 \
+        -logicProp \
+        -mcellProp \
+        -layerMap $LAYER_MAP
+}
+```
+
+}
